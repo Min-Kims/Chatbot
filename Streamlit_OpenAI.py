@@ -92,21 +92,23 @@ def main():
         with st.chat_message("assistant"):
 
             chain = st.session_state.conversation
+            
 #로딩할 때 빙글빙글 돌아가는 영역 구현
             with st.spinner("Thinking..."):
-                result = chain({"question": query})
-                with get_openai_callback() as cb:
-                    st.session_state.chat_history = result['chat_history']
-                response = result['answer']
-                source_documents = result['source_documents']
+                try:
+                    result = chain({"question": query})
+                    with get_openai_callback() as cb:
+                        st.session_state.chat_history = result.get('chat_history', [])
+                    response = result.get('answer', "답변을 찾을 수 없습니다.")
+                    source_documents = result.get('source_documents', [])
 
-                st.markdown(response)
-                #답변에 대한 참고문서를 접고 펴고 할 수 있음
-                with st.expander("참고 문서 확인"):
-                    st.markdown(source_documents[0].metadata['source'], help = source_documents[0].page_content)
-                    st.markdown(source_documents[1].metadata['source'], help = source_documents[1].page_content)
-                    st.markdown(source_documents[2].metadata['source'], help = source_documents[2].page_content)
-                    
+                    st.markdown(response)
+                    if source_documents:
+                        with st.expander("참고 문서 확인"):
+                            for doc in source_documents:
+                                st.markdown(doc.metadata.get('source', '출처 정보 없음'), help=doc.page_content)
+                except Exception as e:
+                    st.error(f"처리 중 오류가 발생했습니다: {e}")            
 
 
 # Add assistant message to chat history
