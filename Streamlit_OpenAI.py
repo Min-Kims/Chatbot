@@ -49,7 +49,7 @@ def main():
 
         
     if process:
-        #Streamlit Scret키 가져오기
+        #Streamlit Secret키 가져오기
         openai_api_key = st.secrets["openai"]["api_key"]
         if not openai_api_key:
             st.info("API 키가 설정되지 않았습니다. secret.toml파일을 확인해주세요.")
@@ -61,9 +61,9 @@ def main():
 
         files_text = get_text(uploaded_files)
         text_chunks = get_text_chunks(files_text)
-        vetorestore = get_vectorstore(text_chunks)
+        vectorstore = get_vectorstore(text_chunks)
      
-        st.session_state.conversation = get_conversation_chain(vetorestore,openai_api_key) 
+        st.session_state.conversation = get_conversation_chain(vectorstore,openai_api_key) 
 
         st.session_state.processComplete = True
 
@@ -101,7 +101,7 @@ def main():
                 source_documents = result['source_documents']
 
                 st.markdown(response)
-                #답변에 대한 참고문서를 접고 평고 할 수 있음
+                #답변에 대한 참고문서를 접고 펴고 할 수 있음
                 with st.expander("참고 문서 확인"):
                     st.markdown(source_documents[0].metadata['source'], help = source_documents[0].page_content)
                     st.markdown(source_documents[1].metadata['source'], help = source_documents[1].page_content)
@@ -163,12 +163,12 @@ def get_vectorstore(text_chunks):
     return vectordb
 
 #위에서 선언한 모든것들을 담아보는 것
-def get_conversation_chain(vetorestore,openai_api_key):
+def get_conversation_chain(vectorstore,openai_api_key):
     llm = ChatOpenAI(openai_api_key=openai_api_key, model_name = 'gpt-3.5-turbo',temperature=0)
     conversation_chain = ConversationalRetrievalChain.from_llm(
             llm=llm, 
             chain_type="stuff", 
-            retriever=vetorestore.as_retriever(search_type = 'mmr', vervose = True), 
+            retriever=vectorstore.as_retriever(search_type = 'mmr', verbose = True), 
             memory=ConversationBufferMemory(memory_key='chat_history', return_messages=True, output_key='answer'),
             get_chat_history=lambda h: h,
             return_source_documents=True,
@@ -179,20 +179,3 @@ def get_conversation_chain(vetorestore,openai_api_key):
 
 if __name__ == '__main__':
     main()  
-
-
-
-
-#프롬프트 추가
-#ConversationalRetrievalChain.from_llm(combine_docs_chain_kwargs={"prompt": your_prompt}))
-
-#첫째, HuggingFaceEmbeddings 시 cpu 말고 gpu를 쓰는 방법이 알고 싶고, 
-#1. Kwargs를 gpu설정해주면 됩니다.
-
-#둘째, openAI 말고, 라마2나 다른 로컬 llm 은 어떻게  해야하는지,
-#2. LLM 선언해주는 부분에 로컬 다운로드한 모델을 선언해주면 됩니다.
-
-#셋째, FAISS가 메모리 에서만 도는 거라면, 끝날 때 저장할 수 있나요? 아니면 처음부터 chromadb를 써야 하나요?
-#3. FAISS는 인덱싱 툴로, 크로마같은 벡터디비 대비 디비로써의 기능이 적습니다. 저장은 가능하나, 수정하거나 관리하는 측면에서 크로마가 더 용이하다고 보시면 될 것 같습니다.
-
-#api key 는 secret 부분에 설정을 해줘서 되는 것 같은데..
